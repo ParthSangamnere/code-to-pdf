@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Code → PDF</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#16181d;--mut:#6b7280;--line:#e2e5ea;--acc:#2563eb;--acc-ink:#fff;--danger:#dc2626;--desk:#d9dce2;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#1a1d24;--ink:#eceef2;--mut:#9aa1ae;--line:#2b303a;--acc:#4f8cff;--acc-ink:#0b1020;--danger:#f87171;--desk:#2a2e37}}
+:root[data-theme="dark"]{--bg:#0f1115;--card:#1a1d24;--ink:#eceef2;--mut:#9aa1ae;--line:#2b303a;--acc:#4f8cff;--acc-ink:#0b1020;--danger:#f87171;--desk:#2a2e37}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4}
+main{max-width:720px;margin:0 auto;padding:16px 14px 100px;display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+h1{font-size:20px;margin:6px 0 0}
+p.sub{margin:2px 0 0;color:var(--mut);font-size:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:12px 14px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;min-height:46px}
+.btn.pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row .btn{flex:1}
+label.lbl{display:block;font-size:13px;color:var(--mut);margin:12px 0 6px}
+label.lbl:first-child{margin-top:0}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:10px 6px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;font-weight:600}
+.seg button.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.chk{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:15px}
+.chk input{width:20px;height:20px}
+textarea{width:100%;min-height:110px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+input[type=text]{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px}
+.file{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-top:8px;font-size:14px;background:var(--bg)}
+.file .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .m{color:var(--mut);font-size:12px}
+.file button{border:0;background:none;font-size:16px;padding:4px 8px;cursor:pointer;color:var(--ink)}
+.file button:disabled{opacity:.3}
+.file .x{color:var(--danger)}
+#prev{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:5;height:42vh;min-height:230px;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+#prev .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:13px;font-weight:600;border-bottom:1px solid var(--line)}
+#prev .hd span{color:var(--mut);font-weight:500}
+#pages{flex:1;overflow:auto;background:var(--desk);padding:10px;-webkit-overflow-scrolling:touch}
+#pages canvas{display:block;width:100%;height:auto;background:#fff;margin:0 auto 10px;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+#pages .note,#pages .none{color:var(--mut);font-size:13px;text-align:center;padding:14px 8px}
+@media(min-width:900px){
+  main{max-width:1100px;grid-template-columns:minmax(0,420px) minmax(0,1fr);align-items:start;column-gap:16px}
+  h1,p.sub{grid-column:1/-1}
+  #pAdd{grid-column:1;grid-row:3}
+  #pOpt{grid-column:1;grid-row:4}
+  #prev{grid-column:2;grid-row:3/span 3;height:calc(100vh - 110px);top:12px}
+  #pages{padding:16px}
+  #pages canvas{max-width:640px}
+}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));z-index:10}
+.dock .in{max-width:1100px;margin:0 auto;display:flex;gap:8px;align-items:center}
+.dock .info{font-size:13px;color:var(--mut)}
+.dock .btn{flex:1;max-width:420px;margin-left:auto}
+#msg{font-size:13px;margin:10px 2px 0;min-height:18px;color:var(--mut)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Code → PDF</h1>
+  <p class="sub">Turn .py files into a clean, print-ready PDF. Only your code goes on the page. Everything stays on your phone.</p>
+
+  <div class="panel" id="pAdd">
+    <input id="file" type="file" accept=".py,.txt,.ipynb,.js,.java,.c,.cpp,.h,.html,.css,.json,.ino,text/plain" multiple hidden>
+    <div class="row">
+      <button class="btn pri" id="add">＋ Add .py files</button>
+      <button class="btn" id="clear">Clear</button>
+    </div>
+    <div id="files"></div>
+    <label class="lbl">…or paste code here</label>
+    <textarea id="paste" placeholder="Paste code (optional)" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+  </div>
+
+  <div id="prev">
+    <div class="hd">Live preview <span id="pcount">–</span></div>
+    <div id="pages"><div class="none">Add a file or paste code to see the page here.</div></div>
+  </div>
+
+  <div class="panel" id="pOpt">
+    <label class="lbl">Font size</label>
+    <div class="seg" id="size">
+      <button data-v="8">Small</button>
+      <button data-v="9.5" class="on">Medium</button>
+      <button data-v="11">Large</button>
+    </div>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="ln"> Show line numbers</label>
+    <label class="chk"><input type="checkbox" id="hdr"> Add file name above each file</label>
+    <label class="chk"><input type="checkbox" id="pg"> Add page numbers</label>
+    <label class="lbl">PDF name</label>
+    <input type="text" id="fname" value="Code_Output">
+    <div id="msg"></div>
+  </div>
+</main>
+
+<div class="dock"><div class="in">
+  <span class="info" id="info">No code yet</span>
+  <button class="btn pri" id="make" disabled>Create PDF</button>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function(){
+  var files=[], size=9.5, uid=0, MAXPREV=12;
+  var $=function(id){return document.getElementById(id)};
+  function say(t){$("msg").textContent=t||""}
+
+  // Standard PDF fonts only cover Latin-1, so map or replace anything outside it
+  var MAP={"–":"-","—":"-","‘":"'","’":"'","“":'"',"”":'"',"…":"...","→":"->","←":"<-","•":"*","✓":"v","✔":"v","✗":"x","×":"x"};
+  function clean(s){
+    s=s.replace(/\r\n?/g,"\n").replace(/\t/g,"    ");
+    var out="";
+    for(var i=0;i<s.length;i++){
+      var c=s[i], k=s.charCodeAt(i);
+      if(k===10||(k>=32&&k<127)||(k>=160&&k<=255)) out+=c;
+      else if(MAP[c]) out+=MAP[c];
+      else if(k>=0xD800&&k<=0xDFFF){ if(k<0xDC00) out+="?" }
+      else if(k>=127) out+="?";
+    }
+    return out;
+  }
+  function fromNotebook(txt){
+    try{
+      var nb=JSON.parse(txt), parts=[];
+      (nb.cells||[]).forEach(function(c){ if(c.cell_type==="code"){ var s=Array.isArray(c.source)?c.source.join(""):(c.source||""); if(s.trim()) parts.push(s) } });
+      return parts.join("\n\n");
+    }catch(e){ return txt }
+  }
+
+  function getDocs(){
+    var d=files.map(function(f){return {name:f.name,text:f.text}});
+    var p=clean($("paste").value).replace(/\n+$/,""); if(p.trim()) d.push({name:"pasted code",text:p});
+    return d;
+  }
+
+  // ONE layout used by both the preview and the PDF, so they always match
+  var W=210,H=297,ML=14,MR=12,MT=14,MB=14, K=0.3528;
+  function layout(docs){
+    var pt=size, lh=pt*K*1.28, cw=pt*0.6*K;
+    var showLn=$("ln").checked, showHdr=$("hdr").checked, showPg=$("pg").checked;
+    var maxLines=Math.floor((H-MT-MB)/lh), gutter=0;
+    if(showLn&&docs.length){ var most=Math.max.apply(null,docs.map(function(d){return d.text.split("\n").length})); gutter=String(most).length+2 }
+    var maxChars=Math.floor((W-ML-MR-gutter*cw)/cw);
+    var pages=[], cur=null, row=0;
+    function newPage(){cur=[];pages.push(cur);row=0}
+    function put(str,num,bold){
+      if(row>=maxLines) newPage();
+      var y=MT+(row+1)*lh-lh*0.25;
+      if(num) cur.push({x:ML+(gutter-1)*cw,y:y,t:num,g:120,a:"r",s:pt});
+      if(str.length) cur.push({x:ML+gutter*cw,y:y,t:str,g:0,b:bold,s:pt});
+      row++;
+    }
+    docs.forEach(function(d){
+      newPage();
+      if(showHdr){ put(d.name,null,true); put("",null,false) }
+      d.text.split("\n").forEach(function(line,idx){
+        var indent=(line.match(/^ */)||[""])[0], pieces=[];
+        var pad=" ".repeat(Math.max(0,Math.min(indent.length+2,maxChars-10))), rest=line;
+        while(rest.length>maxChars){
+          var cut=rest.lastIndexOf(" ",maxChars);
+          if(cut<=pad.length+4) cut=maxChars;
+          pieces.push(rest.slice(0,cut));
+          rest=pad+rest.slice(cut).replace(/^ +/,"");
+        }
+        pieces.push(rest);
+        pieces.forEach(function(s,k){ put(s,(showLn&&k===0)?String(idx+1):null,false) });
+      });
+    });
+    if(showPg) pages.forEach(function(p,i){ p.push({x:W/2,y:H-7,t:String(i+1),g:110,a:"c",s:8}) });
+    return pages;
+  }
+
+  // ---------- live preview ----------
+  var FAM='"Courier New",Courier,ui-monospace,Menlo,Consolas,monospace', mcache={};
+  function advance(ctx,bold){ // width of one char at 1px, so we can force exact 0.6em spacing
+    var key=(bold?"b":"n"); if(mcache[key]) return mcache[key];
+    ctx.font=(bold?"bold ":"")+"100px "+FAM; return (mcache[key]=ctx.measureText("M").width/100);
+  }
+  function renderPreview(){
+    var box=$("pages"), docs=getDocs();
+    if(!docs.length){ box.innerHTML='<div class="none">Add a file or paste code to see the page here.</div>'; $("pcount").textContent="–"; return }
+    var pages=layout(docs), total=pages.length, shown=Math.min(total,MAXPREV);
+    var keep=box.scrollTop; box.innerHTML="";
+    var cssW=Math.max(200,box.clientWidth-(window.innerWidth>=900?32:20)), dpr=Math.min(window.devicePixelRatio||1,2);
+    if(window.innerWidth>=900) cssW=Math.min(cssW,640);
+    for(var p=0;p<shown;p++){
+      var c=document.createElement("canvas"); c.width=Math.round(cssW*dpr); c.height=Math.round(cssW*dpr*H/W);
+      var ctx=c.getContext("2d"); if(!ctx) continue;
+      var sc=c.width/W; ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); ctx.textBaseline="alphabetic";
+      pages[p].forEach(function(it){
+        var cwMM=it.s*0.6*K, px=(cwMM*sc)/advance(ctx,it.b);
+        ctx.font=(it.b?"bold ":"")+px+"px "+FAM; ctx.fillStyle="rgb("+it.g+","+it.g+","+it.g+")";
+        ctx.textAlign=it.a==="r"?"right":(it.a==="c"?"center":"left");
+        ctx.fillText(it.t,it.x*sc,it.y*sc);
+      });
+      box.appendChild(c);
+    }
+    if(total>shown){ var n=document.createElement("div"); n.className="note"; n.textContent="Preview shows the first "+shown+" of "+total+" pages. The PDF will have all of them."; box.appendChild(n) }
+    box.scrollTop=keep;
+    $("pcount").textContent=total+(total===1?" page":" pages")+" · A4";
+  }
+  var tm=null; function schedule(){ clearTimeout(tm); tm=setTimeout(renderPreview,120) }
+  window.addEventListener("resize",schedule);
+
+  function totalLines(){ var n=0; getDocs().forEach(function(d){n+=d.text.split("\n").length}); return n }
+  function refresh(){
+    var box=$("files"); box.innerHTML="";
+    files.forEach(function(f,i){
+      var d=document.createElement("div"); d.className="file";
+      var n=document.createElement("span"); n.className="n"; n.textContent=f.name;
+      var m=document.createElement("span"); m.className="m"; m.textContent=f.text.split("\n").length+" lines";
+      var up=document.createElement("button"); up.textContent="↑"; up.setAttribute("aria-label","Move up"); up.disabled=i===0;
+      up.onclick=function(){var t=files[i];files[i]=files[i-1];files[i-1]=t;refresh()};
+      var dn=document.createElement("button"); dn.textContent="↓"; dn.setAttribute("aria-label","Move down"); dn.disabled=i===files.length-1;
+      dn.onclick=function(){var t=files[i];files[i]=files[i+1];files[i+1]=t;refresh()};
+      var x=document.createElement("button"); x.className="x"; x.textContent="✕"; x.setAttribute("aria-label","Remove");
+      x.onclick=function(){files.splice(i,1);refresh()};
+      d.appendChild(n); d.appendChild(m); d.appendChild(up); d.appendChild(dn); d.appendChild(x); box.appendChild(d);
+    });
+    var has=getDocs().length>0;
+    $("make").disabled=!has;
+    var pasted=$("paste").value.trim()?true:false, lab=files.length?(files.length+(files.length===1?" file":" files")+(pasted?" + pasted":"")):"Pasted code";
+    $("info").textContent=has?(lab+" · "+totalLines()+" lines"):"No code yet";
+    schedule();
+  }
+
+  $("add").onclick=function(){$("file").click()};
+  $("file").onchange=async function(e){
+    var list=[].slice.call(e.target.files).sort(function(a,b){return a.name.localeCompare(b.name,undefined,{numeric:true})});
+    e.target.value="";
+    for(var i=0;i<list.length;i++){
+      var f=list[i], t=await f.text();
+      if(/\.ipynb$/i.test(f.name)) t=fromNotebook(t);
+      files.push({id:++uid,name:f.name,text:clean(t).replace(/\n+$/,"")});
+    }
+    say(""); refresh();
+  };
+  $("paste").oninput=refresh;
+  $("clear").onclick=function(){files=[];$("paste").value="";say("");refresh()};
+  [].forEach.call($("size").children,function(b){
+    b.onclick=function(){[].forEach.call($("size").children,function(x){x.classList.remove("on")});b.classList.add("on");size=parseFloat(b.dataset.v);schedule()};
+  });
+  ["ln","hdr","pg"].forEach(function(id){ $(id).onchange=schedule });
+
+  $("make").onclick=function(){
+    var btn=$("make"); btn.disabled=true; say("Building PDF…");
+    setTimeout(function(){
+      try{
+        var pages=layout(getDocs());
+        var doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait",compress:true});
+        doc.setFont("courier","normal");
+        pages.forEach(function(items,i){
+          if(i>0) doc.addPage();
+          items.forEach(function(it){
+            doc.setFont("courier",it.b?"bold":"normal"); doc.setFontSize(it.s); doc.setTextColor(it.g,it.g,it.g);
+            doc.text(it.t,it.x,it.y,it.a==="r"?{align:"right"}:(it.a==="c"?{align:"center"}:undefined));
+          });
+        });
+        var name=($("fname").value.trim()||"Code_Output").replace(/[\\/:*?"<>|]/g,"_")+".pdf";
+        var blob=doc.output("blob"), a=document.createElement("a");
+        a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove();
+        say("PDF ready: "+name+" ("+pages.length+" pages)");
+      }catch(err){ say("Couldn’t create the PDF: "+(err&&err.message||err)) }
+      btn.disabled=!getDocs().length;
+    },30);
+  };
+  refresh();
+})();
+</script>
+</body>
+</html>
