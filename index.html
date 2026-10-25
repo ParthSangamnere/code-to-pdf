@@ -38,8 +38,14 @@ input[type=text]{width:100%;padding:11px;border-radius:10px;border:1px solid var
 #prev{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:5;height:42vh;min-height:230px;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.12)}
 #prev .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:13px;font-weight:600;border-bottom:1px solid var(--line)}
 #prev .hd span{color:var(--mut);font-weight:500}
+#prev .hd{align-items:center}
+#prev .hd .tools{display:flex;gap:6px;align-items:center}
+#prev .hd .tools button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;min-width:34px;height:30px;font-size:16px;font-weight:700;cursor:pointer;padding:0 8px}
+#prev.full{position:fixed;inset:0;height:100%;max-height:none;z-index:50;border-radius:0;border:0;padding-top:env(safe-area-inset-top,0px)}
+#prev.full #pages{padding:14px}
+
 #pages{flex:1;overflow:auto;background:var(--desk);padding:10px;-webkit-overflow-scrolling:touch}
-#pages canvas{display:block;width:100%;height:auto;background:#fff;margin:0 auto 10px;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+.pg{margin:0 auto 10px;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.3);position:relative}
 #pages .note,#pages .none{color:var(--mut);font-size:13px;text-align:center;padding:14px 8px}
 @media(min-width:900px){
   main{max-width:1100px;grid-template-columns:minmax(0,420px) minmax(0,1fr);align-items:start;column-gap:16px}
@@ -48,7 +54,6 @@ input[type=text]{width:100%;padding:11px;border-radius:10px;border:1px solid var
   #pOpt{grid-column:1;grid-row:4}
   #prev{grid-column:2;grid-row:3/span 3;height:calc(100vh - 110px);top:12px}
   #pages{padding:16px}
-  #pages canvas{max-width:640px}
 }
 .dock{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));z-index:10}
 .dock .in{max-width:1100px;margin:0 auto;display:flex;gap:8px;align-items:center}
@@ -74,7 +79,7 @@ input[type=text]{width:100%;padding:11px;border-radius:10px;border:1px solid var
   </div>
 
   <div id="prev">
-    <div class="hd">Live preview <span id="pcount">–</span></div>
+    <div class="hd"><div>Live preview <span id="pcount">–</span></div><div class="tools"><button id="zo" aria-label="Zoom out">−</button><button id="zi" aria-label="Zoom in">+</button><button id="fs" aria-label="Full screen">⤢</button></div></div>
     <div id="pages"><div class="none">Add a file or paste code to see the page here.</div></div>
   </div>
 
@@ -177,31 +182,55 @@ input[type=text]{width:100%;padding:11px;border-radius:10px;border:1px solid var
     var key=(bold?"b":"n"); if(mcache[key]) return mcache[key];
     ctx.font=(bold?"bold ":"")+"100px "+FAM; return (mcache[key]=ctx.measureText("M").width/100);
   }
+  // Draw pages at the screen's real pixel density (1 canvas pixel = 1 device pixel) and only
+  // keep pages near the viewport alive, so it stays sharp without using too much memory.
+  var pobs=null;
+  function mountPages(box,n,cssW,draw){
+    var dpr=window.devicePixelRatio||1, cw=Math.min(Math.round(cssW*dpr),3300), ch=Math.round(cw*H/W), pxScale=cw/W, divs=[];
+    if(pobs){pobs.disconnect();pobs=null}
+    function on(d){
+      if(d._on) return;
+      var c=document.createElement("canvas"); c.width=cw; c.height=ch; c.style.cssText="display:block;width:100%;height:100%";
+      var ctx=c.getContext("2d"); if(!ctx) return;
+      ctx.fillStyle="#fff"; ctx.fillRect(0,0,cw,ch); ctx.textBaseline="alphabetic";
+      draw(ctx,d._p,pxScale); d.appendChild(c); d._on=true;
+    }
+    function off(d){ if(d._on){ d.innerHTML=""; d._on=false } }
+    for(var p=0;p<n;p++){
+      var d=document.createElement("div"); d.className="pg"; d.style.width=(cw/dpr)+"px"; d.style.height=(ch/dpr)+"px"; d._p=p; box.appendChild(d); divs.push(d);
+    }
+    if("IntersectionObserver" in window){
+      pobs=new IntersectionObserver(function(es){es.forEach(function(e){e.isIntersecting?on(e.target):off(e.target)})},{root:box,rootMargin:"900px 0px"});
+      divs.forEach(function(d){pobs.observe(d)});
+    }else divs.slice(0,12).forEach(on);
+  }
   function renderPreview(){
     var box=$("pages"), docs=getDocs();
     if(!docs.length){ box.innerHTML='<div class="none">Add a file or paste code to see the page here.</div>'; $("pcount").textContent="–"; return }
-    var pages=layout(docs), total=pages.length, shown=Math.min(total,MAXPREV);
+    var pages=layout(docs), total=pages.length, shown=total;
     var keep=box.scrollTop; box.innerHTML="";
-    var cssW=Math.max(200,box.clientWidth-(window.innerWidth>=900?32:20)), dpr=Math.min(window.devicePixelRatio||1,2);
-    if(window.innerWidth>=900) cssW=Math.min(cssW,640);
-    for(var p=0;p<shown;p++){
-      var c=document.createElement("canvas"); c.width=Math.round(cssW*dpr); c.height=Math.round(cssW*dpr*H/W);
-      var ctx=c.getContext("2d"); if(!ctx) continue;
-      var sc=c.width/W; ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); ctx.textBaseline="alphabetic";
+    var wide=window.innerWidth>=900, base=full?Math.min(box.clientWidth-28,860):(wide?Math.min(box.clientWidth-32,640):box.clientWidth-20), cssW=Math.max(200,base*zoom);
+    mountPages(box,shown,cssW,function(ctx,p,sc){
       pages[p].forEach(function(it){
         var cwMM=it.s*0.6*K, px=(cwMM*sc)/advance(ctx,it.b);
         ctx.font=(it.b?"bold ":"")+px+"px "+FAM; ctx.fillStyle="rgb("+it.g+","+it.g+","+it.g+")";
         ctx.textAlign=it.a==="r"?"right":(it.a==="c"?"center":"left");
         ctx.fillText(it.t,it.x*sc,it.y*sc);
       });
-      box.appendChild(c);
-    }
+    });
     if(total>shown){ var n=document.createElement("div"); n.className="note"; n.textContent="Preview shows the first "+shown+" of "+total+" pages. The PDF will have all of them."; box.appendChild(n) }
     box.scrollTop=keep;
-    $("pcount").textContent=total+(total===1?" page":" pages")+" · A4";
+    $("pcount").textContent=total+(total===1?" page":" pages")+" · "+Math.round(zoom*100)+"%";
   }
   var tm=null; function schedule(){ clearTimeout(tm); tm=setTimeout(renderPreview,120) }
   window.addEventListener("resize",schedule);
+  var zoom=1, full=false;
+  function setFull(v){ full=v; $("prev").classList.toggle("full",v); $("fs").textContent=v?"✕":"⤢"; document.body.style.overflow=v?"hidden":""; schedule() }
+  $("fs").onclick=function(){setFull(!full)};
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&full) setFull(false) });
+  $("zi").onclick=function(){zoom=Math.min(2.6,Math.round((zoom+0.2)*10)/10);schedule()};
+  $("zo").onclick=function(){zoom=Math.max(0.5,Math.round((zoom-0.2)*10)/10);schedule()};
+
 
   function totalLines(){ var n=0; getDocs().forEach(function(d){n+=d.text.split("\n").length}); return n }
   function refresh(){
